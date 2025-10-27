@@ -31,6 +31,8 @@ find_package(FreeImage ${COLMAP_FIND_TYPE})
 
 find_package(Metis ${COLMAP_FIND_TYPE})
 
+find_package(Lemon ${COLMAP_FIND_TYPE})
+
 find_package(Glog ${COLMAP_FIND_TYPE})
 if(DEFINED glog_VERSION_MAJOR)
   # Older versions of glog don't export version variables.
