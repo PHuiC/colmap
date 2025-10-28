@@ -301,13 +301,18 @@ int RunMapper(int argc, char** argv) {
 
     reconstruction->Write(output_path);
   }
-
+  
   return EXIT_SUCCESS;
 }
 
 int RunHierarchicalMapper(int argc, char** argv) {
   HierarchicalPipeline::Options mapper_options;
   std::string output_path;
+
+  bool overwrite_priors_covariance = false;
+  double prior_position_std_x = 1.;
+  double prior_position_std_y = 1.;
+  double prior_position_std_z = 1.;
 
   OptionManager options;
   options.AddRequiredOption("database_path", &mapper_options.database_path);
@@ -320,11 +325,37 @@ int RunHierarchicalMapper(int argc, char** argv) {
       "leaf_max_num_images",
       &mapper_options.clustering_options.leaf_max_num_images);
   options.AddMapperOptions();
+
+  options.mapper->use_prior_position = true;
+
+  options.AddDefaultOption(
+      "overwrite_priors_covariance",
+      &overwrite_priors_covariance,
+      "Priors covariance read from database. If true, overwrite the priors "
+      "covariance using the follwoing prior_position_std_... options");
+  options.AddDefaultOption("prior_position_std_x", &prior_position_std_x);
+  options.AddDefaultOption("prior_position_std_y", &prior_position_std_y);
+  options.AddDefaultOption("prior_position_std_z", &prior_position_std_z);
+  options.AddDefaultOption("use_robust_loss_on_prior_position",
+                           &options.mapper->use_robust_loss_on_prior_position);
+  options.AddDefaultOption("prior_position_loss_scale",
+                           &options.mapper->prior_position_loss_scale);
+
   options.Parse(argc, argv);
 
   if (!ExistsDir(output_path)) {
     LOG(ERROR) << "`output_path` is not a directory.";
     return EXIT_FAILURE;
+  }
+
+  if (overwrite_priors_covariance) {
+    const Eigen::Matrix3d covariance =
+        Eigen::Vector3d(
+            prior_position_std_x, prior_position_std_y, prior_position_std_z)
+            .cwiseAbs2()
+            .asDiagonal();
+    UpdateDatabasePosePriorsCovariance(mapper_options.database_path,
+                                       covariance);
   }
 
   mapper_options.incremental_options = *options.mapper;
