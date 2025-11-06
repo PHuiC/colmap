@@ -594,14 +594,31 @@ class FaissVisualIndex : public VisualIndex {
     faiss::IVFSearchParameters search_params;
     search_params.nprobe = num_checks;
 
-    index_->search(descriptors.rows(),
-                   descriptors.data(),
-                   num_neighbors,
-                   distances.data(),
-                   word_ids.data(),
-                   &search_params);
+      // ---- 线程策略：FAISS 内部并行；Eigen/BLAS 单线程，避免嵌套并行冲突 ----
+    Eigen::setNbThreads(1);
+#if defined(USE_OPENBLAS)
+    // 避免额外头文件，这里做一个前置声明（OpenBLAS 提供该符号）
+    extern "C" void openblas_set_num_threads(int);
+    openblas_set_num_threads(1);
+#endif
+#if defined(MKL_AVAILABLE)
+    // 同理，避免引入额外头文件
+    void mkl_set_num_threads_local(int);
+    mkl_set_num_threads_local(1);
+#endif
+#if defined(_OPENMP)
+    omp_set_dynamic(0);  // 可选：固定 team 大小，避免动态调整
+#endif
+    
+    omp_set_num_threads(GetEffectiveNumThreads(num_threads));
 
-//#pragma omp parallel num_threads(1)
+    index_->search(descriptors.rows(),
+                    descriptors.data(),
+                    num_neighbors,
+                    distances.data(),
+                    word_ids.data(),
+                    &search_params);
+    //#pragma omp parallel num_threads(1)
 //    {
 //      omp_set_num_threads(GetEffectiveNumThreads(num_threads));
 //#ifdef _MSC_VER
