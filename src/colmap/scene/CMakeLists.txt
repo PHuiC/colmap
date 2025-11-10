@@ -61,6 +61,7 @@ COLMAP_ADD_LIBRARY(
         colmap_feature_types
         colmap_geometry
         colmap_util
+        colmap_image_cluster
         Eigen3::Eigen
         SQLite::SQLite3
 )

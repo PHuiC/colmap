@@ -377,6 +377,7 @@ set(COLMAP_EXPORT_LIBS
     # Third-party.
     colmap_poisson_recon
     colmap_vlfeat
+    colmap_image_cluster
 )
 if(LSD_ENABLED)
     list(APPEND COLMAP_EXPORT_LIBS

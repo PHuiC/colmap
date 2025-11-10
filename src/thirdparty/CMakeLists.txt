@@ -45,6 +45,7 @@ if(GPU_ENABLED)
     add_subdirectory(SiftGPU)
 endif()
 add_subdirectory(VLFeat)
+add_subdirectory(ImageCluster)
 
 # Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")

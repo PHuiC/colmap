@@ -31,6 +31,10 @@
 
 #include "colmap/math/graph_cut.h"
 
+#include "colmap/geometry/gps.h"
+
+#include "thirdparty/ImageCluster/geo_covi_cluster.h"
+
 #include <set>
 
 namespace colmap {
@@ -44,6 +48,8 @@ bool SceneClustering::Options::Check() const {
 SceneClustering::SceneClustering(const Options& options) : options_(options) {
   THROW_CHECK(options_.Check());
 }
+
+void SceneClustering::Init(){ root_cluster_ = std::make_unique<Cluster>(); }
 
 void SceneClustering::Partition(
     const std::vector<std::pair<image_t, image_t>>& image_pairs,
@@ -277,6 +283,10 @@ const SceneClustering::Cluster* SceneClustering::GetRootCluster() const {
   return root_cluster_.get();
 }
 
+SceneClustering::Cluster* SceneClustering::GetRootClusterMutable() {
+  return root_cluster_.get();
+}
+
 std::vector<const SceneClustering::Cluster*> SceneClustering::GetLeafClusters()
     const {
   THROW_CHECK_NOTNULL(root_cluster_);
@@ -324,10 +334,81 @@ SceneClustering SceneClustering::Create(const Options& options,
     all_num_inliers.push_back(num_inliers);
   }
 
-  LOG(INFO) << "Partitioning scene graph...";
-  SceneClustering scene_clustering(options);
-  scene_clustering.Partition(all_image_pairs, all_num_inliers);
-  return scene_clustering;
+  if (options.is_geo_covi_cluster){
+    int cluster_size =
+        (database.NumImages() + options.leaf_max_num_images - 1) /
+        options.leaf_max_num_images;
+
+    int overlap_size = options.image_overlap;
+
+    vgpart::GeoCoviCluster geo_covi_cluster;
+    vgpart::GeoCoviClusterOptions geo_covi_options;
+    geo_covi_options.prune_opts.min_edge_weight = 100;
+    geo_covi_options.reassign_opts.min_edge_weight = 100;
+    geo_covi_options.overlap_opts.min_edge_weight = 100;
+    geo_covi_options.overlap_opts.k_core = 1;
+    geo_covi_options.overlap_opts.top_blocks = 3;
+
+    std::map<std::pair<image_t, image_t>, int> covi_edges_weight;
+    for (const auto& [pair_id, num_inliers] : pair_ids_and_num_inliers) {
+      covi_edges_weight.insert({PairIdToImagePair(pair_id), num_inliers});
+    }
+
+    GPSTransform gps(GPSTransform::Ellipsoid::WGS84);
+    auto& images = database.ReadAllImages();
+    std::map<image_t, Eigen::Vector3d> img_poses;
+    for (auto& image : images) {
+      image_t img_id = image.ImageId();
+      Eigen::Vector3d pose = database.ReadPosePrior(img_id).position;
+      auto [utm, zone] = gps.EllipsoidToUTM({pose});
+      img_poses.insert({img_id, utm.front()});
+    }
+
+    std::map<std::pair<image_t, image_t>, int> geo_edges_weight;
+    for (auto& edges_weight : covi_edges_weight) {
+      auto& edge = edges_weight.first;
+      int distance = (img_poses.at(edge.first) - img_poses.at(edge.second)).norm();
+      geo_edges_weight.insert({edge, distance});
+    }
+
+    LOG(INFO) << "Partitioning scene graph...";
+    std::vector<std::vector<uint32_t>> output_clusters;
+    geo_covi_cluster.RunAll(covi_edges_weight,
+                            geo_edges_weight,
+                            cluster_size,
+                            overlap_size,
+                            geo_covi_options,
+                            output_clusters);
+
+    LOG(INFO) << "FillCluster...";
+    SceneClustering scene_clustering(options);
+    scene_clustering.Init();
+    geo_covi_cluster.FillCluster(output_clusters, *scene_clustering.GetRootClusterMutable());
+
+    LOG(INFO) << "SavePLY_XYZ...";
+    int count = 0;
+    for (auto& cluster : output_clusters) {
+        std::vector<Eigen::Vector3d> poses;
+        for (auto& img_id : cluster) {
+            poses.push_back(img_poses.at(img_id));
+        }
+        std::string save_path = "D:\\" + std::to_string(count++) + ".ply";
+        geo_covi_cluster.SavePLY_XYZ(save_path, poses);
+    }
+
+    LOG(INFO) << "Return...";
+
+    return scene_clustering;
+
+  } else{
+
+    LOG(INFO) << "Partitioning scene graph...";
+    SceneClustering scene_clustering(options);
+    scene_clustering.Partition(all_image_pairs, all_num_inliers);
+    return scene_clustering;
+  }
+
+  
 }
 
 }  // namespace colmap
