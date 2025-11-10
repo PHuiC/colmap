@@ -78,7 +78,7 @@ endif()
 
 project(COLMAP LANGUAGES C CXX)
 
-set(COLMAP_VERSION "3.13.0.dev0")
+set(COLMAP_VERSION "3.14.0.dev0")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -377,6 +377,7 @@ set(COLMAP_EXPORT_LIBS
     # Third-party.
     colmap_poisson_recon
     colmap_vlfeat
+    colmap_image_cluster
 )
 if(LSD_ENABLED)
     list(APPEND COLMAP_EXPORT_LIBS

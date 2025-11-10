@@ -61,9 +61,18 @@ COLMAP_ADD_LIBRARY(
         colmap_feature_types
         colmap_geometry
         colmap_util
+        colmap_image_cluster
         Eigen3::Eigen
         SQLite::SQLite3
 )
+
+if(TESTS_ENABLED)
+    target_sources(
+        colmap_scene
+        PRIVATE
+            reconstruction_matchers.h
+    )
+endif()
 
 COLMAP_ADD_TEST(
     NAME camera_test
@@ -131,6 +140,11 @@ COLMAP_ADD_TEST(
     NAME reconstruction_manager_test
     SRCS reconstruction_manager_test.cc
     LINK_LIBS colmap_scene
+)
+COLMAP_ADD_TEST(
+    NAME reconstruction_matchers_test
+    SRCS reconstruction_matchers_test.cc
+    LINK_LIBS colmap_scene colmap_estimators
 )
 COLMAP_ADD_TEST(
     NAME reconstruction_pruning_test
