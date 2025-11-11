@@ -39,8 +39,8 @@ namespace vgpart {
     };
 
     struct EdgeFusionOptions {
-        double alpha = 0.6;
-        double beta = 0.4;
+        double alpha = 0.4;
+        double beta = 0.6;
         double sigma = -1.0;
         double average_ends = true;
         double min_edge_weight = 1e-6;

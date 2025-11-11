@@ -350,6 +350,7 @@ namespace vgpart {
       colmap::SceneClustering::Options scene_cluster_options;
       scene_cluster_options.is_hierarchical = false;
       scene_cluster_options.image_overlap = 0;
+      scene_cluster_options.branching = cluster_size;
       colmap::SceneClustering scene_clustering(scene_cluster_options);
       scene_clustering.Partition(image_pairs, pair_weights);
       
