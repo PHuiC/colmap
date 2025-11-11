@@ -34,6 +34,7 @@
 #include "colmap/geometry/gps.h"
 
 #include "thirdparty/ImageCluster/geo_covi_cluster.h"
+#include "thirdparty/ImageCluster/hierarchical_cluster.h"
 
 #include <set>
 
@@ -334,7 +335,7 @@ SceneClustering SceneClustering::Create(const Options& options,
     all_num_inliers.push_back(num_inliers);
   }
 
-  if (options.is_geo_covi_cluster){
+  if (options.is_geo_covi_cluster && !options.is_hierarchical){
     int cluster_size =
         (database.NumImages() + options.leaf_max_num_images - 1) /
         options.leaf_max_num_images;
@@ -400,7 +401,92 @@ SceneClustering SceneClustering::Create(const Options& options,
 
     return scene_clustering;
 
-  } else{
+  } 
+  else if (options.is_geo_covi_cluster && options.is_hierarchical) {
+    vgpart::HierarchicalOptions opts;
+    vgpart::HierarchicalCluster hierarchical_cluster;
+    opts.geo_covi_options.prune_opts.min_edge_weight = 100;
+    opts.geo_covi_options.reassign_opts.min_edge_weight = 100;
+    opts.geo_covi_options.overlap_opts.min_edge_weight = 100;
+    opts.geo_covi_options.overlap_opts.k_core = 1;
+    opts.geo_covi_options.overlap_opts.top_blocks = 3;
+
+    std::map<std::pair<image_t, image_t>, int> covi_edges_weight;
+    for (const auto& [pair_id, num_inliers] : pair_ids_and_num_inliers) {
+      covi_edges_weight.insert({PairIdToImagePair(pair_id), num_inliers});
+    }
+
+    GPSTransform gps(GPSTransform::Ellipsoid::WGS84);
+    auto& images = database.ReadAllImages();
+    std::map<image_t, Eigen::Vector3d> img_poses;
+    for (auto& image : images) {
+      image_t img_id = image.ImageId();
+      Eigen::Vector3d pose = database.ReadPosePrior(img_id).position;
+      auto [utm, zone] = gps.EllipsoidToUTM({pose});
+      img_poses.insert({img_id, utm.front()});
+    }
+
+    std::map<std::pair<image_t, image_t>, int> geo_edges_weight;
+    for (auto& edges_weight : covi_edges_weight) {
+      auto& edge = edges_weight.first;
+      int distance =
+          (img_poses.at(edge.first) - img_poses.at(edge.second)).norm();
+      geo_edges_weight.insert({edge, distance});
+    }
+
+    SceneClustering scene_clustering(options);
+    scene_clustering.Init();
+
+    std::set<image_t> image_ids;
+    for (const auto& kv:covi_edges_weight){
+      image_ids.insert(kv.first.first);
+      image_ids.insert(kv.first.second);
+    }
+
+    scene_clustering.GetRootClusterMutable()->image_ids.insert(
+        scene_clustering.GetRootClusterMutable()->image_ids.end(),
+        image_ids.begin(),
+        image_ids.end());
+
+    LOG(INFO) << "Recursively partitioning scene graph...";
+    hierarchical_cluster.RunPartition(covi_edges_weight,
+                                      geo_edges_weight,
+                                      opts,
+                                      0,
+                                      scene_clustering.GetRootClusterMutable());
+
+    std::vector<const Cluster*> clusters_queue;
+    std::vector<const Cluster*> clusters_nodes;
+    clusters_queue.push_back(scene_clustering.GetRootClusterMutable());
+    while (!clusters_queue.empty()) {
+      const auto cluster = clusters_queue.back();
+      clusters_nodes.push_back(cluster);
+      clusters_queue.pop_back();
+      for (const auto& child_cluster : cluster->child_clusters) {
+        if (!child_cluster.child_clusters.empty()){
+          clusters_queue.push_back(&child_cluster);
+        }
+        else {
+          clusters_nodes.push_back(&child_cluster);
+        }
+      }
+    }
+
+    int count = 0;
+    vgpart::GeoCoviCluster geo_covi_cluster;
+    for (const auto& nodes : clusters_nodes){
+      std::vector<Eigen::Vector3d> poses;
+      for (auto& img_id : nodes->image_ids) {
+        poses.push_back(img_poses.at(img_id));
+      }
+      std::string save_path = "D:\\level" + std::to_string(nodes->level) + "-" +
+                              std::to_string(count++) + ".ply";
+      geo_covi_cluster.SavePLY_XYZ(save_path, poses);
+    }
+
+    return scene_clustering;
+
+  } else {
 
     LOG(INFO) << "Partitioning scene graph...";
     SceneClustering scene_clustering(options);

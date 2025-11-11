@@ -12,7 +12,10 @@ namespace vgpart {
       ReassignOptions reassign_opts;
       OverlapOptions overlap_opts;
     };
-
+    
+    // TODO:处理POSE == COVI场景 √
+    // TODO:处理POSE < COVI场景
+    // TODO:处理POSE = 0, COVI > 0场景
     class GeoCoviCluster {
      public:
       bool FuseGeoCoviEdgeWeight(

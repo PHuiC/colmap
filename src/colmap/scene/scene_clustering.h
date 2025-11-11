@@ -44,7 +44,9 @@ class SceneClustering {
  public:
   struct Options {
     // Flag for hierarchical vs flat clustering
-    bool is_hierarchical = false;
+    bool is_hierarchical = true;
+
+    bool is_geo_covi_cluster = true;
 
     // The branching factor of the hierarchical clustering.
     int branching = 2;
@@ -59,9 +61,7 @@ class SceneClustering {
     // cluster is further partitioned using the given branching factor. Note
     // that a cluster leaf node will have at most `leaf_max_num_images +
     // overlap` images to satisfy the overlap constraint.
-    int leaf_max_num_images = 500;
-
-    bool is_geo_covi_cluster = true;
+    int leaf_max_num_images = 200;
 
     bool Check() const;
   };
@@ -69,6 +69,7 @@ class SceneClustering {
   struct Cluster {
     std::vector<image_t> image_ids;
     std::vector<Cluster> child_clusters;
+    int level = 0;
   };
 
   explicit SceneClustering(const Options& options);
