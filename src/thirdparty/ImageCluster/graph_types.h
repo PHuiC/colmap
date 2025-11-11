@@ -19,6 +19,19 @@ namespace vgpart {
       return {a, b};
     }
 
+    struct DegreeStats {
+      uint32_t min_degree = 0;
+      uint32_t max_degree = 0;
+      double avg_degree = 0.0;
+      double median_degree = 0.0;
+      bool is_single_component = false;
+    };
+
+    struct DegreeResult {
+      DegreeStats stats;
+      std::unordered_map<uint32_t, uint32_t> node_degree;  // node_id -> degree
+    };
+
     struct SubsetPruneResult {
       std::vector<uint32_t> kept_nodes;
       std::vector<uint32_t> removed_nodes;

@@ -563,4 +563,77 @@ std::vector<std::vector<std::vector<uint32_t>>> ComputePairwiseOverlaps(
   }
   return overlaps;
 }
+
+DegreeResult ScoreViewGraphDegrees(
+    const std::map<EdgeKey, int>& covi_edges_weight, int min_weight) {
+
+    DegreeResult result;
+
+    // 1) LEMON 建图
+    lemon::ListGraph G;
+    lemon::ListGraph::NodeMap<uint32_t> id_of_node(G);  // Node -> node_id
+    std::unordered_map<uint32_t, lemon::ListGraph::Node> node_of_id;
+
+    auto ensure_node = [&](uint32_t id) -> lemon::ListGraph::Node {
+      auto it = node_of_id.find(id);
+      if (it != node_of_id.end()) return it->second;
+      auto n = G.addNode();
+      node_of_id.emplace(id, n);
+      id_of_node[n] = id;
+      return n;
+    };
+
+    for (const auto& kv : covi_edges_weight) {
+      const uint32_t u = kv.first.first;
+      const uint32_t v = kv.first.second;
+      if (u == v) continue;
+      auto nu = ensure_node(u);
+      auto nv = ensure_node(v);
+      G.addEdge(nu, nv);
+    }
+
+    // 过滤后若没有任何节点，按约定返回 0/false
+    if (lemon::countNodes(G) == 0) {
+      result.stats = DegreeStats{0, 0, 0.0, 0.0, false};
+      result.node_degree.clear();
+      return result;
+    }
+
+    // 2) 统计每个节点的度（LEMON: countIncEdges）
+    uint32_t min_deg = std::numeric_limits<uint32_t>::max();
+    uint32_t max_deg = 0;
+    uint64_t sum_deg = 0;
+
+    std::vector<uint32_t> deg_vals;
+    deg_vals.reserve(lemon::countNodes(G));
+
+    for (lemon::ListGraph::NodeIt n(G); n != lemon::INVALID; ++n) {
+      const uint32_t d = static_cast<uint32_t>(lemon::countIncEdges(G, n));
+      const uint32_t id = id_of_node[n];
+      result.node_degree[id] = d;
+
+      min_deg = std::min(min_deg, d);
+      max_deg = std::max(max_deg, d);
+      sum_deg += d;
+      deg_vals.push_back(d);
+    }
+    std::sort(deg_vals.begin(), deg_vals.end());
+
+    const double avg =
+        static_cast<double>(sum_deg) / static_cast<double>(deg_vals.size());
+    const double med = MedianOfSorted(deg_vals);
+
+    // 3) 连通性（LEMON: connectedComponents）
+    lemon::ListGraph::NodeMap<int> comp(G);
+    const int num_comp = lemon::connectedComponents(G, comp);
+    const bool single = (num_comp == 1);
+
+    result.stats.min_degree = min_deg;
+    result.stats.max_degree = max_deg;
+    result.stats.avg_degree = avg;
+    result.stats.median_degree = med;
+    result.stats.is_single_component = single;
+    return result;
+
+}
 }  // namespace vgpart

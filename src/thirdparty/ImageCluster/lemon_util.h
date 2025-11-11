@@ -89,4 +89,18 @@ namespace vgpart {
         const std::vector<std::vector<uint32_t>>& cores,
         const std::map<EdgeKey, int>& edges_weight,
         const OverlapOptions& p);
+
+    inline double MedianOfSorted(const std::vector<uint32_t>& sorted_vals) {
+      const size_t n = sorted_vals.size();
+      if (n == 0) return 0.0;
+      if (n & 1) return static_cast<double>(sorted_vals[n / 2]);
+      return (static_cast<double>(sorted_vals[n / 2 - 1]) +
+              static_cast<double>(sorted_vals[n / 2])) *
+             0.5;
+    }
+
+    DegreeResult ScoreViewGraphDegrees(
+        const std::map<EdgeKey, int>& covi_edges_weight, int min_weight = 1);
+
+
     }
