@@ -49,7 +49,7 @@ namespace vgpart {
                   const std::map<EdgeKey, int>& geo_edges_weight,
                   const uint32_t cluster_size,
                   const uint32_t overlap_size,
-                  const GeoCoviClusterOptions& opts,
+                  GeoCoviClusterOptions& opts,
                   std::vector<std::vector<uint32_t>>& output_clusters);
 
       bool FillCluster(const std::vector<std::vector<uint32_t>>& output_clusters,

@@ -252,7 +252,7 @@ long long CrossScoreComponentToSubset(
   long long score = 0;
   for (uint32_t u : comp) {
     for (uint32_t v : target_subset_nodes) {
-      auto it = edges_weight.find({u, v});
+      auto it = edges_weight.find(norm_edge(u, v));
       if (it != edges_weight.end() && it->second >= min_edge_weight) {
         score += it->second;
       }
@@ -423,11 +423,8 @@ int EffectiveDegreeToSet(uint32_t u,
                          int min_edge_weight) {
   int deg = 0;
   for (uint32_t v : T) {
-    auto it_uv = edges_weight.find({u, v});
-    if (it_uv != edges_weight.end() && it_uv->second >= min_edge_weight) ++deg;
-
-    auto it_vu = edges_weight.find({v, u});
-    if (it_vu != edges_weight.end() && it_vu->second >= min_edge_weight) ++deg;
+    auto it = edges_weight.find(norm_edge(u, v));
+    if (it != edges_weight.end() && it->second >= min_edge_weight) ++deg;
   }
   return deg;
 }
@@ -438,13 +435,9 @@ long long CrossScoreToSet(uint32_t u,
                           int min_edge_weight) {
   long long s = 0;
   for (uint32_t v : T) {
-    auto it_uv = edges_weight.find({u, v});
-    if (it_uv != edges_weight.end() && it_uv->second >= min_edge_weight)
-      s += it_uv->second;
-
-    auto it_vu = edges_weight.find({v, u});
-    if (it_vu != edges_weight.end() && it_vu->second >= min_edge_weight)
-      s += it_vu->second;
+    auto it = edges_weight.find(norm_edge(u, v));
+    if (it != edges_weight.end() && it->second >= min_edge_weight)
+      s += it->second;
   }
   return s;
 }
@@ -489,7 +482,7 @@ std::vector<uint32_t> SelectOverlapFromSrcToDst(
     int deg = EffectiveDegreeToSet(u, target, edges_weight, p.min_edge_weight);
     if (deg >= p.k_core) {
       picked.push_back(u);
-      target.insert(u);  // 加入增强集合，有助于后续候选过线
+      //target.insert(u);  // 加入增强集合，有助于后续候选过线
     }
   }
   return picked;
@@ -535,7 +528,7 @@ std::vector<std::vector<std::vector<uint32_t>>> ComputePairwiseOverlaps(
   for (size_t i = 0; i < N; ++i) {
     for (size_t j : topJs[i]) {
       sel[i][j] = 1;  // 种子方向
-      sel[j][i] = 1;  // ★ 对称闭包（即使 j 的 top-n 里没有 i 也强制开启）
+      //sel[j][i] = 1;  // ★ 对称闭包（即使 j 的 top-n 里没有 i 也强制开启）
     }
   }
 

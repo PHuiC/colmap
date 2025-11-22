@@ -325,6 +325,7 @@ SceneClustering SceneClustering::Create(const Options& options,
   LOG(INFO) << "Reading scene graph...";
   const std::vector<std::pair<image_pair_t, int>> pair_ids_and_num_inliers =
       database.ReadTwoViewGeometryNumInliers();
+  LOG(INFO) << "Matches pair size: " << pair_ids_and_num_inliers.size();
 
   std::vector<std::pair<image_t, image_t>> all_image_pairs;
   all_image_pairs.reserve(pair_ids_and_num_inliers.size());
@@ -347,7 +348,7 @@ SceneClustering SceneClustering::Create(const Options& options,
     geo_covi_options.prune_opts.min_edge_weight = 100;
     geo_covi_options.reassign_opts.min_edge_weight = 100;
     geo_covi_options.overlap_opts.min_edge_weight = 100;
-    geo_covi_options.overlap_opts.k_core = 1;
+    geo_covi_options.overlap_opts.k_core = 2;
     geo_covi_options.overlap_opts.top_blocks = 3;
 
     std::map<std::pair<image_t, image_t>, int> covi_edges_weight;
@@ -405,14 +406,16 @@ SceneClustering SceneClustering::Create(const Options& options,
   else if (options.is_geo_covi_cluster && options.is_hierarchical) {
     vgpart::HierarchicalOptions opts;
     vgpart::HierarchicalCluster hierarchical_cluster;
-    opts.geo_covi_options.prune_opts.min_edge_weight = 100;
-    opts.geo_covi_options.reassign_opts.min_edge_weight = 100;
-    opts.geo_covi_options.overlap_opts.min_edge_weight = 100;
-    opts.geo_covi_options.overlap_opts.k_core = 1;
-    opts.geo_covi_options.overlap_opts.top_blocks = 3;
+    opts.geo_covi_options.prune_opts.min_edge_weight = 200;
+    opts.geo_covi_options.reassign_opts.min_edge_weight = 200;
+    opts.geo_covi_options.overlap_opts.min_edge_weight = 200;
+    opts.geo_covi_options.overlap_opts.k_core = 6;
+    opts.geo_covi_options.overlap_opts.top_blocks = 1;
+    opts.geo_covi_options.overlap_opts.K = opts.image_overlap;
 
     std::map<std::pair<image_t, image_t>, int> covi_edges_weight;
     for (const auto& [pair_id, num_inliers] : pair_ids_and_num_inliers) {
+      if (num_inliers < 100) continue;
       covi_edges_weight.insert({PairIdToImagePair(pair_id), num_inliers});
     }
 

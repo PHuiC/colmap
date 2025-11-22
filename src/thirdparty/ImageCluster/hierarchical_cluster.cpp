@@ -3,7 +3,7 @@
 bool vgpart::HierarchicalCluster::RunPartition(
     const std::map<EdgeKey, int>& covi_edges_weight,
     const std::map<EdgeKey, int>& geo_edges_weight,
-    const HierarchicalOptions& opts,
+    HierarchicalOptions& opts,
     const int level,
     colmap::SceneClustering::Cluster* root_cluster) {
 

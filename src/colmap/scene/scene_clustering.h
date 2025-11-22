@@ -61,7 +61,7 @@ class SceneClustering {
     // cluster is further partitioned using the given branching factor. Note
     // that a cluster leaf node will have at most `leaf_max_num_images +
     // overlap` images to satisfy the overlap constraint.
-    int leaf_max_num_images = 200;
+    int leaf_max_num_images = 500;
 
     bool Check() const;
   };

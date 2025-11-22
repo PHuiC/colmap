@@ -171,13 +171,15 @@ void HierarchicalPipeline::Run() {
   const int kMaxNumThreads = -1;
   const int num_eff_threads = GetEffectiveNumThreads(kMaxNumThreads);
   const int kDefaultNumWorkers = 8;
-  const int num_eff_workers =
-      options_.num_workers < 1
-          ? std::min(static_cast<int>(leaf_clusters.size()),
-                     std::min(kDefaultNumWorkers, num_eff_threads))
-          : options_.num_workers;
-  const int num_threads_per_worker =
-      std::max(1, num_eff_threads / num_eff_workers);
+  const int num_eff_workers = 2;
+  //const int num_eff_workers =
+  //    options_.num_workers < 1
+  //        ? std::min(static_cast<int>(leaf_clusters.size()),
+  //                   std::min(kDefaultNumWorkers, num_eff_threads))
+  //        : options_.num_workers;
+  const int num_threads_per_worker = GetEffectiveNumThreads(kMaxNumThreads);
+  //const int num_threads_per_worker =
+  //    std::max(1, num_eff_threads / num_eff_workers);
 
   // Function to reconstruct one cluster using incremental mapping.
   auto ReconstructCluster =

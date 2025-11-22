@@ -198,7 +198,7 @@ namespace vgpart {
         const std::map<EdgeKey, int>& geo_edges_weight,
         const uint32_t cluster_size,
         const uint32_t overlap_size,
-        const GeoCoviClusterOptions& opts,
+        GeoCoviClusterOptions& opts,
         std::vector<std::vector<uint32_t>>& output_clusters) {
       std::map<EdgeKey, int> fusion_edges_weight;
 
@@ -210,7 +210,7 @@ namespace vgpart {
 
       LOG(INFO) << "RunMetisSplit...";
       RunMetisSplit(
-          fusion_edges_weight, cluster_size, overlap_size, output_clusters);
+          fusion_edges_weight, cluster_size, 0, output_clusters);
 
       LOG(INFO) << "RunPruneCores...";
       std::vector<SubsetPack> packs;
@@ -283,12 +283,9 @@ namespace vgpart {
       vec_image_pairs.clear();
       pair_weights.clear();
 
-      std::map<EdgeKey, int> filtled_edges_weight;
-      FiltEdges(edges_weight, filtled_edges_weight);
-
-      vec_image_pairs.reserve(filtled_edges_weight.size());
-      pair_weights.reserve(filtled_edges_weight.size());
-      for (const auto& kv : filtled_edges_weight) {
+      vec_image_pairs.reserve(edges_weight.size());
+      pair_weights.reserve(edges_weight.size());
+      for (const auto& kv : edges_weight) {
         vec_image_pairs.push_back(kv.first);
         pair_weights.push_back(static_cast<int>(kv.second));
       }
